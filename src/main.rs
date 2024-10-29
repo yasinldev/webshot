@@ -5,7 +5,7 @@ use cli_table::{ Cell, Style, Table};
 use tokio::sync::{mpsc, Mutex};
 use crate::scanning::tcp::{get_user_agents, scan_tcp};
 
-mod scanning;
+mod scanning
 
 #[tokio::main]
 async fn main() {
