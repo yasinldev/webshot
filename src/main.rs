@@ -1,5 +1,5 @@
 use std::env;
-use std::sync::{Arc};
+use std::sync::Arc;
 use colored::{ColoredString, Colorize};
 use cli_table::{ Cell, Style, Table};
 use tokio::sync::{mpsc, Mutex};
