@@ -16,7 +16,7 @@ Please use the `--help` flag to see the available parameters.
 
 ## Screenshots
 
-![Screenshot](img/img.png)
+![Screenshot](img/img_1.png)
 
 ## Installation
 

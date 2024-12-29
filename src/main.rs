@@ -1,9 +1,11 @@
 use std::env;
 use std::sync::{Arc};
+use std::time::Duration;
 use colored::{ColoredString, Colorize};
 use cli_table::{ Cell, Style, Table};
 use tokio::sync::{mpsc, Mutex};
-use crate::scanning::tcp::{get_user_agents, scan_tcp};
+use crate::scanning::tcp::{get_user_agents, scan_tcp, scan_udp};
+use chrono::Local;
 
 mod scanning;
 
@@ -11,7 +13,7 @@ mod scanning;
 async fn main() {
     let args: Vec<_> = env::args().collect();
 
-    if args.len() < 3 {
+    if args.len() < 2 {
         println!("{}", "Command not found. Use --help for more information".red());
         eprintln!("{}", "Usage: [params] (<ip> || <url>) <port>".red());
         return;
@@ -44,41 +46,28 @@ async fn main() {
         return;
     }
 
-    let mut ip = String::new();
-    println!("{}", "webshot 0.1.0. Webshot must not be used for illegal purposes. Webshot developers are not responsible for any illegal activity".yellow());
-    println!("{}", "webshot uses different user agents to scan. Using a random user agent...".yellow());
-    println!("{}: {}", "INFO: If you do not want to use a different user-agent, you must specify this in the parameters".blue(), "--no-agent".on_blue());
+    let time = Local::now().format("%H:%M:%S").to_string();
 
-    let mut ip_type: scanning::dns::IpAddresses =
-        scanning::dns::IpAddresses {
-            ipv4: None,
-            ipv6: None,
-        };
-    if args[1].contains("http") || args[1].contains("https") {
-        println!("{}", "URI detected. Resolving domain...".green());
-        ip_type = scanning::dns::resolve_domain(&args[1]).await;
-    }
+    let mut ip = String::new();
+    println!("{}{} {}", format!("[{}]", time).yellow(), "[WARN]".bright_yellow(), "Webshot 0.1.0. Webshot must not be used for illegal purposes. Webshot developers are not responsible for any illegal activity.".yellow());
+    println!("{}{} {}", format!("[{}]", time).yellow(), "[INFO]".blue(), "Webshot is open source to support: https://github.com/yasinldev/webshot".blue());
+    println!("{}{} {}", format!("[{}]", time).yellow(), "[INFO]".blue(), "Webshot uses different user agents to scan. Using a random user agent...".blue());
+
+    let ip_type = scanning::dns::resolve_domain(&args[1]).await;
 
     let mut ports: Vec<u16> = Vec::new();
-    if args[2].contains("-") {
-        ports = args[2]
-            .split('-')
-            .map(|s| s.parse().unwrap())
-            .collect();
+    if args.len() > 2 {
+        if args[2].contains("-") {
+            ports = args[2].split('-').map(|s| s.parse().unwrap()).collect();
 
-        if ports.len() != 2 {
-            println!("{}", "Invalid port range format".red());
-            return;
+            if ports.len() != 2 || ports[0] > ports[1] {
+                eprintln!("{}{} {}", format!("[{}]", time), "[ERROR]".on_red(), "Invalid Port Range".red());
+                return;
+            }
+        } else {
+            ports.push(args[2].parse().unwrap());
         }
-
-        if ports[0] > ports[1] {
-            println!("{}", "Invalid port range".red());
-            return;
-        }
-    } else {
-        ports.push(args[2].parse().unwrap());
     }
-
 
     if args.contains(&"--ipv6".to_string()) {
         if let Some(ipv6) = ip_type.ipv6 {
@@ -96,44 +85,50 @@ async fn main() {
         }
     }
 
-    // tcp scan
     if ports.is_empty() {
-        ports = vec![1, 9999];
-        println!("{}", "No port specified. Scanning default ports 1-9999".green());
+        ports = vec![1, 443];
+        println!("{}{} {}", format!("[{}]", time).yellow(), "[INFO]".blue(), "No port specified. Scanning default ports 1-443".blue());
     }
-
-    let (tx, mut rx) = mpsc::channel(100);
-
-    // live scanning status
-    println!("{}", "Scanning...".green());
 
     let user_agents = Arc::new(Mutex::new(get_user_agents().await));
 
-    let mut protocols = None;
-    if args.contains(&"--udp".to_string()) {
-        protocols = Some("UDP");
+    let protocol = if args.contains(&"--udp".to_string()) {
+        "UDP"
     } else {
-        protocols = Some("TCP");
-    }
+        "TCP"
+    };
 
-    if ports.len() == 1 {
-        ports.push(ports[0]);
-    }
+    let (tx, mut rx) = mpsc::channel(100);
 
+    println!("{}{} {}", format!("[{}]", time).yellow(), "[INFO]".blue(), "Scanning... (This process may take time depending on connection speed)".blue());
     for port in ports[0]..=ports[1] {
         let tx = tx.clone();
         let ip = ip.clone();
-        let cloned_user_agent = user_agents.clone();
+
         tokio::spawn(async move {
-            if let Some((open_port, banner, is_open)) = scan_tcp(&ip, port, cloned_user_agent, protocols.unwrap()).await {
-                tx.send((open_port, banner, is_open)).await.unwrap();
+            match protocol {
+                "TCP" => {
+                    if let Some((open_port, banner, is_open)) = scan_tcp(&ip, port, Duration::from_secs(100)).await {
+                        tx.send((open_port, banner, is_open)).await.unwrap();
+                    }
+                }
+                "UDP" => {
+                    if let Some((open_port, banner, is_open)) = scan_udp(&ip, port, Duration::from_secs(100)).await {
+                        tx.send((open_port, banner, is_open)).await.unwrap();
+                    }
+                }
+                _ => {}
             }
         });
     }
 
     drop(tx);
 
-    while let Some((open_port, banner, is_open)) = rx.recv().await {}
+    let mut results: Vec<(u16, String, String)> = Vec::new();
 
-    println!("{}", "Scan completed".green());
+    while let Some((open_port, banner, service)) = rx.recv().await {
+        results.push((open_port, banner, service));
+    }
+
+    println!("{}{} {}", format!("[{}]", time).yellow(), "[INFO]".blue(),"Scan completed".green());
 }
