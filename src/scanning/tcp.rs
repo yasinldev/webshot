@@ -1,6 +1,7 @@
 use tokio::io::{AsyncReadExt};
 use std::time::Duration;
 use std::{fs};
+use std::error::Error;
 use colored::Colorize;
 use futures::AsyncBufReadExt;
 use regex::Regex;
@@ -12,22 +13,27 @@ pub(crate) async fn get_user_agents() -> Vec<String> {
     user_agents.lines().map(|x| x.to_string()).collect()
 }
 
-fn get_service_name(server_response: &str) -> String {
-    let probe_path = "../service-probe/nmap-service-probe.txt".to_string();
-    let probe = fs::read_to_string(probe_path).unwrap_or("".to_string());
+async fn get_service_name(server_response: &str) -> Result<String, Box<dyn Error>> {
+    let url = "https://svn.nmap.org/nmap/nmap-service-probes?view=co&rev=HEAD&pathrev=HEAD";
 
-    let match_regex = Regex::new(r"match (\w+) m\|(.+?)\| p/(.+)/").unwrap();
+    let response = reqwest::get(url).await?;
+    let probe = response.text().await?;
+
+    let match_regex = Regex::new(r"match (\S+) m\|([^|]+?)\| p/([^/]+?)/")?;
 
     for match_cap in match_regex.captures_iter(&probe) {
         let service_name = &match_cap[1];
         let pattern = &match_cap[2];
 
-        if Regex::new(pattern).unwrap().is_match(server_response) {
-            return service_name.to_string();
+        if let Ok(regex) = Regex::new(pattern) {
+            if regex.is_match(server_response) {
+                return Ok(format!("{} {}", service_name, &match_cap[3]));
+            }
         }
     }
 
-    "Unknown".to_string()
+
+    Ok("Unknown".to_string())
 }
 
 pub async fn scan_tcp(ip: &str, port: u16, duration: Duration) ->  Option<(u16, String, String)> {
@@ -39,8 +45,10 @@ pub async fn scan_tcp(ip: &str, port: u16, duration: Duration) ->  Option<(u16, 
 
             if let Ok(n) = stream.read(&mut buffer).await {
                 let response = String::from_utf8_lossy(&buffer[..n]).to_string();
-                println!("{}", &response);
-                let service_name = get_service_name(&response);
+                let res_clone = response.clone();
+
+                let service_name = get_service_name(res_clone.as_str());
+                let service_name_result = service_name.await.unwrap().to_string();
 
                 println!(
                     "{}{} {} => {}: {} => {}: {}",
@@ -48,12 +56,12 @@ pub async fn scan_tcp(ip: &str, port: u16, duration: Duration) ->  Option<(u16, 
                     "[TCP]".yellow(),
                     port.to_string().yellow(),
                     "Response".green(),
-                    response,
+                    response.clone().to_string(),
                     "Service".green(),
-                    service_name
+                    service_name_result
                 );
 
-                Some((port, response, service_name))
+                Some((port, response, service_name_result))
             } else {
                 println!(
                     "{}{} {} => {}",
@@ -98,7 +106,10 @@ pub async fn scan_udp(ip: &str, port: u16, duration: Duration) -> Option<(u16, S
             match tokio::time::timeout(duration, socket.recv_from(&mut buffer)).await {
                 Ok(Ok((n, _))) => {
                     let response = String::from_utf8_lossy(&buffer[..n]).to_string();
-                    let service_name = get_service_name(&response);
+                    let res_clone = response.clone();
+
+                    let service_name = get_service_name(res_clone.as_str());
+                    let ser_clone = service_name.await.unwrap().to_string();
 
                     println!(
                         "{}{} {} => {}: {} => {}: {}",
@@ -108,10 +119,10 @@ pub async fn scan_udp(ip: &str, port: u16, duration: Duration) -> Option<(u16, S
                         "Response".green(),
                         response,
                         "Service".green(),
-                        service_name
+                        ser_clone
                     );
 
-                    Some((port, response, service_name))
+                    Some((port, response, ser_clone))
                 }
                 _ => {
                     None

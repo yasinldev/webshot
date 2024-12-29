@@ -101,11 +101,9 @@ async fn main() {
     let (tx, mut rx) = mpsc::channel(100);
 
     println!("{}{} {}", format!("[{}]", time).yellow(), "[INFO]".blue(), "Scanning... (This process may take time depending on connection speed)".blue());
-
     for port in ports[0]..=ports[1] {
         let tx = tx.clone();
         let ip = ip.clone();
-        let _user_agents = user_agents.clone();
 
         tokio::spawn(async move {
             match protocol {
@@ -126,6 +124,11 @@ async fn main() {
 
     drop(tx);
 
-    while let Some((open_port, banner, is_open)) = rx.recv().await {}
+    let mut results: Vec<(u16, String, String)> = Vec::new();
+
+    while let Some((open_port, banner, service)) = rx.recv().await {
+        results.push((open_port, banner, service));
+    }
+
     println!("{}{} {}", format!("[{}]", time).yellow(), "[INFO]".blue(),"Scan completed".green());
 }
