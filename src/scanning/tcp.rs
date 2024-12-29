@@ -16,21 +16,14 @@ fn get_service_name(server_response: &str) -> String {
     let probe_path = "../service-probe/nmap-service-probe.txt".to_string();
     let probe = fs::read_to_string(probe_path).unwrap_or("".to_string());
 
-    let probe_regex = Regex::new(r"Probe ([A-Z]+) ([^\s]+) q\|(.+?)\|").unwrap();
     let match_regex = Regex::new(r"match (\w+) m\|(.+?)\| p/(.+)/").unwrap();
 
-    for cap in probe_regex.captures_iter(&probe) {
-        let protocol = &cap[1];
+    for match_cap in match_regex.captures_iter(&probe) {
+        let service_name = &match_cap[1];
+        let pattern = &match_cap[2];
 
-        if protocol == "TCP" {
-            for match_cap in match_regex.captures_iter(&probe) {
-                let service_name = &match_cap[1];
-                let pattern = &match_cap[2];
-
-                if Regex::new(pattern).unwrap().is_match(server_response) {
-                    return service_name.to_string();
-                }
-            }
+        if Regex::new(pattern).unwrap().is_match(server_response) {
+            return service_name.to_string();
         }
     }
 
@@ -46,12 +39,13 @@ pub async fn scan_tcp(ip: &str, port: u16, duration: Duration) ->  Option<(u16, 
 
             if let Ok(n) = stream.read(&mut buffer).await {
                 let response = String::from_utf8_lossy(&buffer[..n]).to_string();
+                println!("{}", &response);
                 let service_name = get_service_name(&response);
 
                 println!(
-                    "{}{}: {} => {}: {} => {}: {}",
+                    "{}{} {} => {}: {} => {}: {}",
                     "[OPEN]".green(),
-                    "[TCP]".on_yellow(),
+                    "[TCP]".yellow(),
                     port.to_string().yellow(),
                     "Response".green(),
                     response,
@@ -62,9 +56,9 @@ pub async fn scan_tcp(ip: &str, port: u16, duration: Duration) ->  Option<(u16, 
                 Some((port, response, service_name))
             } else {
                 println!(
-                    "{}{}: {} => {}",
+                    "{}{} {} => {}",
                     "[CLOSED]".red(),
-                    "[TCP]".on_yellow(),
+                    "[TCP]".yellow(),
                     port.to_string().yellow(),
                     "No Response".red()
                 );
@@ -72,13 +66,6 @@ pub async fn scan_tcp(ip: &str, port: u16, duration: Duration) ->  Option<(u16, 
             }
         }
         Ok(Err(_)) => {
-            println!(
-                "{}{}: {} => {}",
-                "[FILTERED/CLOSED]".red(),
-                "[TCP]".on_yellow(),
-                port.to_string().yellow(),
-                "Connection Error".red()
-            );
             None
         }
         Err(e) => {
@@ -97,9 +84,9 @@ pub async fn scan_udp(ip: &str, port: u16, duration: Duration) -> Option<(u16, S
             let message = b"Ping";
             if let Err(e) = socket.send_to(message, &addr).await {
                 println!(
-                    "{}{}: {} => {}: {}",
+                    "{}{} {} => {}: {}",
                     "[ERROR]".red(),
-                    "[UDP]".on_yellow(),
+                    "[UDP]".yellow(),
                     port.to_string().yellow(),
                     "Send Error".red(),
                     e.to_string().red()
@@ -114,9 +101,9 @@ pub async fn scan_udp(ip: &str, port: u16, duration: Duration) -> Option<(u16, S
                     let service_name = get_service_name(&response);
 
                     println!(
-                        "{}{}: {} => {}: {} => {}: {}",
+                        "{}{} {} => {}: {} => {}: {}",
                         "[OPEN]".green(),
-                        "[UDP]".on_yellow(),
+                        "[UDP]".yellow(),
                         port.to_string().yellow(),
                         "Response".green(),
                         response,
@@ -127,22 +114,15 @@ pub async fn scan_udp(ip: &str, port: u16, duration: Duration) -> Option<(u16, S
                     Some((port, response, service_name))
                 }
                 _ => {
-                    println!(
-                        "{}{}: {} => {}",
-                        "[FILTERED/CLOSED]".red(),
-                        "[UDP]".on_yellow(),
-                        port.to_string().yellow(),
-                        "No Response".red()
-                    );
                     None
                 }
             }
         }
         Err(e) => {
             println!(
-                "{}{}: {} => {}: {}",
+                "{}{} {} => {}: {}",
                 "[ERROR]".red(),
-                "[UDP]".on_yellow(),
+                "[UDP]".yellow(),
                 port.to_string().yellow(),
                 "Bind Error".red(),
                 e.to_string().red()
