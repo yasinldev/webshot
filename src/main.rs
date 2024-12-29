@@ -86,7 +86,7 @@ async fn main() {
 
     if ports.is_empty() {
         ports = vec![1, 443];
-        println!("{}", "No port specified. Scanning default ports 1-443".green());
+        println!("{}{} {}", format!("[{}]", time).yellow(), "[INFO]:".blue(), "No port specified. Scanning default ports 1-443".green());
     }
 
     let user_agents = Arc::new(Mutex::new(get_user_agents().await));
@@ -99,7 +99,7 @@ async fn main() {
 
     let (tx, mut rx) = mpsc::channel(100);
 
-    println!("{}", "Scanning...".green());
+    println!("{}{} {}", format!("[{}]", time).yellow(), "[INFO]:".blue(), "Scanning...".blue());
 
     for port in ports[0]..=ports[1] {
         let tx = tx.clone();
@@ -126,5 +126,5 @@ async fn main() {
     drop(tx);
 
     while let Some((open_port, banner, is_open)) = rx.recv().await {}
-    println!("{}{}: {}", format!("[{}]", time).yellow(), "[INFO]".blue(),"Scan completed".green());
+    println!("{}{} {}", format!("[{}]", time).yellow(), "[INFO]:".blue(),"Scan completed".green());
 }
