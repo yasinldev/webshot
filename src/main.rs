@@ -49,18 +49,19 @@ async fn main() {
     let time = Local::now().format("%H:%M:%S").to_string();
 
     let mut ip = String::new();
-    println!("{}{} {}", format!("[{}]", time).yellow(), "[WARN]:".bright_yellow(), "webshot 0.1.0. Webshot must not be used for illegal purposes. Webshot developers are not responsible for any illegal activity".yellow());
-    println!("{}{} {}", format!("[{}]", time).yellow(), "[INFO]:".blue(), "webshot uses different user agents to scan. Using a random user agent...".yellow());
+    println!("{}{} {}", format!("[{}]", time).yellow(), "[WARN]".bright_yellow(), "Webshot 0.1.0. Webshot must not be used for illegal purposes. Webshot developers are not responsible for any illegal activity.".yellow());
+    println!("{}{} {}", format!("[{}]", time).yellow(), "[INFO]".blue(), "Webshot is open source to support: https://github.com/yasinldev/webshot".blue());
+    println!("{}{} {}", format!("[{}]", time).yellow(), "[INFO]".blue(), "Webshot uses different user agents to scan. Using a random user agent...".blue());
 
     let ip_type = scanning::dns::resolve_domain(&args[1]).await;
 
     let mut ports: Vec<u16> = Vec::new();
-    if args.len() > 3 {
+    if args.len() > 2 {
         if args[2].contains("-") {
             ports = args[2].split('-').map(|s| s.parse().unwrap()).collect();
 
             if ports.len() != 2 || ports[0] > ports[1] {
-                eprintln!("{}{}: {}", format!("[{}]", time), "[ERROR]".on_red(), "Invalid Port Range".red());
+                eprintln!("{}{} {}", format!("[{}]", time), "[ERROR]".on_red(), "Invalid Port Range".red());
                 return;
             }
         } else {
@@ -86,7 +87,7 @@ async fn main() {
 
     if ports.is_empty() {
         ports = vec![1, 443];
-        println!("{}{} {}", format!("[{}]", time).yellow(), "[INFO]:".blue(), "No port specified. Scanning default ports 1-443".green());
+        println!("{}{} {}", format!("[{}]", time).yellow(), "[INFO]".blue(), "No port specified. Scanning default ports 1-443".blue());
     }
 
     let user_agents = Arc::new(Mutex::new(get_user_agents().await));
@@ -99,7 +100,7 @@ async fn main() {
 
     let (tx, mut rx) = mpsc::channel(100);
 
-    println!("{}{} {}", format!("[{}]", time).yellow(), "[INFO]:".blue(), "Scanning...".blue());
+    println!("{}{} {}", format!("[{}]", time).yellow(), "[INFO]".blue(), "Scanning... (This process may take time depending on connection speed)".blue());
 
     for port in ports[0]..=ports[1] {
         let tx = tx.clone();
@@ -126,5 +127,5 @@ async fn main() {
     drop(tx);
 
     while let Some((open_port, banner, is_open)) = rx.recv().await {}
-    println!("{}{} {}", format!("[{}]", time).yellow(), "[INFO]:".blue(),"Scan completed".green());
+    println!("{}{} {}", format!("[{}]", time).yellow(), "[INFO]".blue(),"Scan completed".green());
 }
