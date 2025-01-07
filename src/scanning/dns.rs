@@ -1,4 +1,3 @@
-use std::net::ToSocketAddrs;
 use std::process::exit;
 use colored::Colorize;
 use url::Url;
@@ -26,7 +25,7 @@ pub async fn resolve_domain(domain: &str) -> IpAddresses {
         Err(e) => {
             eprintln!(
                 "{}{} {}: {} ({})",
-                format!("[{}]", time),
+                format!("[{}]", time).yellow(),
                 "[ERROR]".on_red(),
                 "Failed to resolve domain".red(),
                 domain,
@@ -41,8 +40,12 @@ pub async fn resolve_domain(domain: &str) -> IpAddresses {
 
     for socket_addr in &addr_iter {
         match socket_addr {
-            std::net::SocketAddr::V4(ipv4_addr) => ipv4 = Some(IpType::V4(ipv4_addr.ip().to_string())),
-            std::net::SocketAddr::V6(ipv6_addr) => ipv6 = Some(IpType::V6(ipv6_addr.ip().to_string())),
+            std::net::SocketAddr::V4(ipv4_addr) => {
+                ipv4 = Some(IpType::V4(ipv4_addr.ip().to_string()));
+            },
+            std::net::SocketAddr::V6(ipv6_addr) => {
+                ipv6 = Some(IpType::V6(ipv6_addr.ip().to_string()));
+            },
         }
     }
 
@@ -51,8 +54,15 @@ pub async fn resolve_domain(domain: &str) -> IpAddresses {
             "{}{} {}: {:?}",
             format!("[{}]", time).yellow(),
             "[INFO]".blue(),
-            "IPv4 address found".blue(),
+            "IPv4 address found".green(),
             ip
+        );
+    } else {
+        println!(
+            "{}{} {}: No IPv4 address found",
+            format!("[{}]", time).yellow(),
+            "[INFO]".blue(),
+            "IPv4 address not found".blue()
         );
     }
 
@@ -61,8 +71,15 @@ pub async fn resolve_domain(domain: &str) -> IpAddresses {
             "{}{} {}: {:?}",
             format!("[{}]", time).yellow(),
             "[INFO]".blue(),
-            "IPv6 address found".blue(),
+            "IPv6 address found".green(),
             ip
+        );
+    } else {
+        println!(
+            "{}{} {}: No IPv6 address found",
+            format!("[{}]", time).yellow(),
+            "[INFO]".blue(),
+            "IPv6 address not found".blue()
         );
     }
 

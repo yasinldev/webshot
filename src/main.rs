@@ -1,10 +1,12 @@
 use std::env;
+use std::net::Ipv4Addr;
 use std::sync::{Arc};
 use std::time::Duration;
 use colored::{ColoredString, Colorize};
 use cli_table::{ Cell, Style, Table};
 use tokio::sync::{mpsc, Mutex};
 use crate::scanning::tcp::{get_user_agents, scan_tcp, scan_udp};
+use crate::scanning::os_fingerprint::send_syn_packet;
 use chrono::Local;
 
 mod scanning;
@@ -98,9 +100,28 @@ async fn main() {
         "TCP"
     };
 
+    let mut target_port: Option<u16> = None;
+    if args.contains(&"--search-os".to_string()) {
+        if let Some(pos) = args.iter().position(|arg| arg == "--target-port") {
+            if pos + 1 < args.len() {
+                target_port = Some(args[pos + 1].parse().unwrap());
+                println!("{}{} {}", format!("[{}]", time).yellow(), "[INFO]".blue(), format!("OS search will be performed on port: {}", target_port.unwrap()).blue());
+
+                let local_ip: Ipv4Addr = "127.0.0.1".parse().unwrap();
+                let dest_ip: Ipv4Addr = ip.parse().unwrap();
+                let source_port: u16 = 12345;
+                send_syn_packet(source_port, target_port.unwrap(), local_ip, dest_ip).await;
+            }
+        } else {
+            eprintln!("{}{} {}", format!("[{}]", time), "[ERROR]".on_red(), "Target port not specified".red());
+            return;
+        }
+    }
+
     let (tx, mut rx) = mpsc::channel(100);
 
     println!("{}{} {}", format!("[{}]", time).yellow(), "[INFO]".blue(), "Scanning... (This process may take time depending on connection speed)".blue());
+
     for port in ports[0]..=ports[1] {
         let tx = tx.clone();
         let ip = ip.clone();

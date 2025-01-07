@@ -16,8 +16,15 @@ pub(crate) async fn get_user_agents() -> Vec<String> {
 async fn get_service_name(server_response: &str) -> Result<String, Box<dyn Error>> {
     let url = "https://svn.nmap.org/nmap/nmap-service-probes?view=co&rev=HEAD&pathrev=HEAD";
 
-    let response = reqwest::get(url).await?;
-    let probe = response.text().await?;
+    let response = reqwest::get(url).await.map_err(|e| {
+        println!("{}{}", "[ERROR]".on_red(), e);
+        e
+    })?;
+
+    let probe = response.text().await.map_err(|e| {
+        println!("{}{}", "[ERROR]".on_red(), e);
+        e
+    })?;
 
     let match_regex = Regex::new(r"match (\S+) m\|([^|]+?)\| p/([^/]+?)/")?;
 
@@ -31,7 +38,6 @@ async fn get_service_name(server_response: &str) -> Result<String, Box<dyn Error
             }
         }
     }
-
 
     Ok("Unknown".to_string())
 }
@@ -51,7 +57,7 @@ pub async fn scan_tcp(ip: &str, port: u16, duration: Duration) ->  Option<(u16, 
                 let service_name_result = service_name.await.unwrap().to_string();
 
                 println!(
-                    "{}{} {} => {}: {} => {}: {}",
+                    "{}{} {} \n => {}:  {}  \n => {}: {}",
                     "[OPEN]".green(),
                     "[TCP]".yellow(),
                     port.to_string().yellow(),
