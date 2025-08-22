@@ -1,0 +1,106 @@
+# WebShot Configuration File
+# Place this file in your home directory or current working directory
+
+[defaults]
+# Default connection timeout in seconds
+timeout = 5
+
+# Default number of concurrent connections
+concurrency = 100
+
+# Whether to use random user agents by default
+random_agent = false
+
+# Default output format (false = human-readable, true = JSON)
+json_output = false
+
+# Default protocol (TCP or UDP)
+protocol = "TCP"
+
+[scanning]
+# Default ports to scan when no ports are specified
+default_ports = [22, 80, 443, 3306, 5432, 6379, 27017]
+
+# TCP-specific timeout
+tcp_timeout = 5
+
+# UDP-specific timeout
+udp_timeout = 10
+
+# Maximum number of ports to scan in a single operation
+max_ports = 65535
+
+# Whether to show progress bars
+show_progress = true
+
+# Whether to show timestamps in output
+show_timestamps = true
+
+[logging]
+# Default log level (error, warn, info, debug, trace)
+level = "info"
+
+# Whether to log to file
+log_to_file = false
+
+# Log file path (if enabled)
+log_file = "webshot.log"
+
+# Whether to include colors in log output
+colored_logs = true
+
+[output]
+# Whether to show banner information
+show_banner = true
+
+# Whether to show scan summary
+show_summary = true
+
+# Whether to show closed ports
+show_closed_ports = false
+
+# Maximum banner length to display
+max_banner_length = 200
+
+# Whether to include raw responses in output
+include_raw_responses = false
+
+[security]
+# Whether to validate target addresses
+validate_targets = true
+
+# Maximum number of targets per scan
+max_targets = 10
+
+# Whether to allow scanning of private networks
+allow_private_networks = true
+
+# Whether to allow scanning of localhost
+allow_localhost = true
+
+[performance]
+# Connection pool size
+connection_pool_size = 1000
+
+# DNS cache size
+dns_cache_size = 100
+
+# Whether to reuse connections
+reuse_connections = true
+
+# Maximum retry attempts for failed connections
+max_retries = 3
+
+[user_agents]
+# Custom user agents to use (in addition to built-in ones)
+custom_agents = [
+    "WebShot/1.0 (Professional Scanner)",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+]
+
+# Whether to rotate user agents automatically
+auto_rotate = true
+
+# User agent rotation interval (in requests)
+rotation_interval = 100

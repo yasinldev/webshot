@@ -1,0 +1,28 @@
+[package]
+name = "webshot"
+version = "0.1.0"
+edition = "2021"
+authors = ["yasinldev"]
+description = "Professional network port scanner and service detector"
+license = "MIT"
+repository = "https://github.com/yasinldev/webshot"
+keywords = ["network", "scanner", "security", "ports", "tcp", "udp"]
+categories = ["network-programming", "security-tools"]
+
+[dependencies]
+tokio = { version = "1.39.3", features = ["full"] }
+futures = "0.3.30"
+colored = "2.1.0"
+cli-table = "0.4.9"
+url = "2.5.2"
+rand = "0.8.5"
+reqwest = { version = "0.12.7", features = ["json"] }
+chrono = { version = "0.4.39", features = ["serde"] }
+regex = "1.11.1"
+clap = { version = "4.5.4", features = ["derive"] }
+serde = { version = "1.0.197", features = ["derive"] }
+serde_json = "1.0.114"
+anyhow = "1.0.81"
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+indicatif = "0.17.8"
